@@ -210,8 +210,11 @@ def get_article():
 @app.route('/article/<article_id>', methods=['GET'])
 def get_article_detail(article_id):
     print(article_id)
+    article = db.article.find_one({"_id": ObjectId(article_id)})
+    print(article)
+    article["_id"] = str(article["_id"])
 
-    return jsonify({'message': 'success', 'article_id': article_id})
+    return jsonify({'message': 'success', "article": article})
 
 
 if __name__ == '__main__':
