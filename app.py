@@ -168,7 +168,7 @@ def post_article(user):
         'title': data.get('title', None),
         'content': data.get('content', None),
         'user': user['id'],  # user '_id' 를 저장
-        'user_eamil': db_user['email'],  # db_user 에서 가져온 user 의 email 저장
+        'user_email': db_user['email'],  # db_user 에서 가져온 user 의 email 저장
         'time': now
     }
 
