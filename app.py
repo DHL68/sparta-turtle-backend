@@ -26,7 +26,9 @@ db = client.turtle
 ########################################################################
 def authorize(f):
     @wraps(f)
-    def decorated_function():
+    # args 리스트 형태로 얼마든지 들어가도 괜찮음
+    # kwargs ~'', ~'', 몇개가 들어가도 인식을 하겠다.
+    def decorated_function(*args, **kwargs):
         if not 'Authorization' in request.headers:  # headers 에서 Authorization 인증을 하고
             abort(401)  # Authorization 으로 토큰이 오지 않았다면 에러 401
         # Authorization 이 headers에 있다면 token 값을 꺼내온다.
@@ -36,7 +38,7 @@ def authorize(f):
                               'HS256'])  # 꺼내온 token 값을 디코딩해서 꺼내주고
         except:
             abort(401)  # 디코딩이 안될 경우 에러 401
-        return f(user)
+        return f(user, *args, **kwargs)
     return decorated_function
 
 
@@ -215,6 +217,35 @@ def get_article_detail(article_id):
     article["_id"] = str(article["_id"])
 
     return jsonify({'message': 'success', "article": article})
+
+
+########################################################################
+########################################################################
+########################################################################
+# 게시글 수정
+########################################################################
+########################################################################
+########################################################################
+@app.route('/article/<article_id>', methods=["PATCH"])
+@authorize
+def patch_article_detail(user, article_id):
+
+    data = json.loads(request.data)
+    title = data.get("title")
+    content = data.get("content")
+    # update_one 프라이머리 키 동일 조건, 요청한 유저와 작성한 유저 검사
+    # "$set" 바꿀 내용
+    article = db.article.update_one(
+        {"_id": ObjectId(article_id), "user": user["id"]}, {
+            "$set": {"title": title, "content": content}
+        })
+    # matched_count 업데이트가 되었다면 1, 안되었다면 0
+    print(article.matched_count)
+
+    if article.matched_count:
+        return jsonify({'message': 'success'})
+    else:
+        return jsonify({'message': 'fail'}), 403
 
 
 if __name__ == '__main__':
