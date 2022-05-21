@@ -211,10 +211,12 @@ def get_article():
 ########################################################################
 @app.route('/article/<article_id>', methods=['GET'])
 def get_article_detail(article_id):
-    print(article_id)
     article = db.article.find_one({"_id": ObjectId(article_id)})
-    print(article)
-    article["_id"] = str(article["_id"])
+    if article:
+        article["_id"] = str(article["_id"])
+        return jsonify({'message': 'success', 'article': article})
+    else:
+        return jsonify({'message': 'fail'}), 404
 
     return jsonify({'message': 'success', "article": article})
 
@@ -243,6 +245,19 @@ def patch_article_detail(user, article_id):
     print(article.matched_count)
 
     if article.matched_count:
+        return jsonify({'message': 'success'})
+    else:
+        return jsonify({'message': 'fail'}), 403
+
+
+@app.route('/article/<article_id>', methods=['DELETE'])
+@authorize
+def delete_article_detail(user, article_id):
+
+    article = db.article.delete_one(
+        {"_id": ObjectId(article_id), "user": user["id"]}
+    )
+    if article.deleted_count:
         return jsonify({'message': 'success'})
     else:
         return jsonify({'message': 'fail'}), 403
