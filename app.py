@@ -26,7 +26,9 @@ db = client.turtle
 ########################################################################
 def authorize(f):
     @wraps(f)
-    def decorated_function():
+    # args 리스트 형태로 얼마든지 들어가도 괜찮음
+    # kwargs ~'', ~'', 몇개가 들어가도 인식을 하겠다.
+    def decorated_function(*args, **kwargs):
         if not 'Authorization' in request.headers:  # headers 에서 Authorization 인증을 하고
             abort(401)  # Authorization 으로 토큰이 오지 않았다면 에러 401
         # Authorization 이 headers에 있다면 token 값을 꺼내온다.
@@ -36,14 +38,14 @@ def authorize(f):
                               'HS256'])  # 꺼내온 token 값을 디코딩해서 꺼내주고
         except:
             abort(401)  # 디코딩이 안될 경우 에러 401
-        return f(user)
+        return f(user, *args, **kwargs)
     return decorated_function
 
 
 @app.route('/')
 @authorize  # decorated 함수 적용
 def hello_world(user):
-    print(user)  # 토큰 값 출력
+    # print(user)  # 토큰 값 출력
     return jsonify({'message': 'success'})
 
 
@@ -99,18 +101,18 @@ def sign_up():
 @app.route('/login', methods=['POST'])
 def login():
     data = json.loads(request.data)
-    print(data)
+    # print(data)
 
     email = data.get("email")
     password = data.get("password")
     hashed_pw = hashlib.sha256(password.encode('utf-8')).hexdigest()  # 복호화
-    print(hashed_pw)
+    # print(hashed_pw)
 
     result = db.turtle.find_one({
         "email": email,
         "password": hashed_pw
     })
-    print(result)
+    # print(result)
 
     if result is None:
         return jsonify({'message': '이메일이나 비밀번호가 맞지 않습니다.'}), 401
@@ -120,7 +122,7 @@ def login():
         'exp': datetime.utcnow() + timedelta(seconds=60 * 60 * 24)
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-    print(token)
+    # print(token)
 
     return jsonify({'message': 'success', "token": token})
 
@@ -137,12 +139,11 @@ def login():
 def get_user_info(user):
     result = db.turtle.find_one({
         '_id': ObjectId(user["id"])
-
     })
 
-    print(result)
+    # print(result)
 
-    return jsonify({'message': 'success', 'email': result['email']})
+    return jsonify({'message': 'success', 'email': result['email'], 'id': user['id']})
 
 
 ########################################################################
@@ -156,7 +157,7 @@ def get_user_info(user):
 @authorize
 def post_article(user):
     data = json.loads(request.data)
-    print(data)
+    # print(data)
 
     # user 의 id 값을 가져와서 ObjectId 시켜준 후 DB 에서 가져온다.
     # 실제 email 정보를 저장하기 위함
@@ -172,7 +173,7 @@ def post_article(user):
         'time': now
     }
 
-    print(doc)
+    # print(doc)
 
     db.article.insert_one(doc)
 
@@ -192,7 +193,7 @@ def get_article():
     # 반복문을 돌리고
     for article in articles:
         # articles 의 데이터 중에 .get 으로 가져와서 "title" 를 가져온다.
-        print(article.get("title"))
+        # print(article.get("title"))
         # article 의 _id 를 str _id 로 변환
         article["_id"] = str(article["_id"])
 
@@ -209,12 +210,54 @@ def get_article():
 ########################################################################
 @app.route('/article/<article_id>', methods=['GET'])
 def get_article_detail(article_id):
-    print(article_id)
     article = db.article.find_one({"_id": ObjectId(article_id)})
-    print(article)
-    article["_id"] = str(article["_id"])
+    if article:
+        article["_id"] = str(article["_id"])
+        return jsonify({'message': 'success', 'article': article})
+    else:
+        return jsonify({'message': 'fail'}), 404
 
-    return jsonify({'message': 'success', "article": article})
+
+########################################################################
+########################################################################
+########################################################################
+# 게시글 수정
+########################################################################
+########################################################################
+########################################################################
+@app.route('/article/<article_id>', methods=["PATCH"])
+@authorize
+def patch_article_detail(user, article_id):
+
+    data = json.loads(request.data)
+    title = data.get("title")
+    content = data.get("content")
+    # update_one 프라이머리 키 동일 조건, 요청한 유저와 작성한 유저 검사
+    # "$set" 바꿀 내용
+    article = db.article.update_one(
+        {"_id": ObjectId(article_id), "user": user["id"]}, {
+            "$set": {"title": title, "content": content}
+        })
+    # matched_count 업데이트가 되었다면 1, 안되었다면 0
+    # print(article.matched_count)
+
+    if article.matched_count:
+        return jsonify({'message': 'success'})
+    else:
+        return jsonify({'message': 'fail'}), 403
+
+
+@app.route('/article/<article_id>', methods=['DELETE'])
+@authorize
+def delete_article_detail(user, article_id):
+
+    article = db.article.delete_one(
+        {"_id": ObjectId(article_id), "user": user["id"]}
+    )
+    if article.deleted_count:
+        return jsonify({'message': 'success'})
+    else:
+        return jsonify({'message': 'fail'}), 403
 
 
 if __name__ == '__main__':
