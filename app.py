@@ -139,12 +139,11 @@ def login():
 def get_user_info(user):
     result = db.turtle.find_one({
         '_id': ObjectId(user["id"])
-
     })
 
     # print(result)
 
-    return jsonify({'message': 'success', 'email': result['email']})
+    return jsonify({'message': 'success', 'email': result['email'], 'id': user['id']})
 
 
 ########################################################################
