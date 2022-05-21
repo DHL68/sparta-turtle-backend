@@ -45,7 +45,7 @@ def authorize(f):
 @app.route('/')
 @authorize  # decorated 함수 적용
 def hello_world(user):
-    print(user)  # 토큰 값 출력
+    # print(user)  # 토큰 값 출력
     return jsonify({'message': 'success'})
 
 
@@ -101,18 +101,18 @@ def sign_up():
 @app.route('/login', methods=['POST'])
 def login():
     data = json.loads(request.data)
-    print(data)
+    # print(data)
 
     email = data.get("email")
     password = data.get("password")
     hashed_pw = hashlib.sha256(password.encode('utf-8')).hexdigest()  # 복호화
-    print(hashed_pw)
+    # print(hashed_pw)
 
     result = db.turtle.find_one({
         "email": email,
         "password": hashed_pw
     })
-    print(result)
+    # print(result)
 
     if result is None:
         return jsonify({'message': '이메일이나 비밀번호가 맞지 않습니다.'}), 401
@@ -122,7 +122,7 @@ def login():
         'exp': datetime.utcnow() + timedelta(seconds=60 * 60 * 24)
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-    print(token)
+    # print(token)
 
     return jsonify({'message': 'success', "token": token})
 
@@ -142,7 +142,7 @@ def get_user_info(user):
 
     })
 
-    print(result)
+    # print(result)
 
     return jsonify({'message': 'success', 'email': result['email']})
 
@@ -158,7 +158,7 @@ def get_user_info(user):
 @authorize
 def post_article(user):
     data = json.loads(request.data)
-    print(data)
+    # print(data)
 
     # user 의 id 값을 가져와서 ObjectId 시켜준 후 DB 에서 가져온다.
     # 실제 email 정보를 저장하기 위함
@@ -174,7 +174,7 @@ def post_article(user):
         'time': now
     }
 
-    print(doc)
+    # print(doc)
 
     db.article.insert_one(doc)
 
@@ -194,7 +194,7 @@ def get_article():
     # 반복문을 돌리고
     for article in articles:
         # articles 의 데이터 중에 .get 으로 가져와서 "title" 를 가져온다.
-        print(article.get("title"))
+        # print(article.get("title"))
         # article 의 _id 를 str _id 로 변환
         article["_id"] = str(article["_id"])
 
@@ -218,8 +218,6 @@ def get_article_detail(article_id):
     else:
         return jsonify({'message': 'fail'}), 404
 
-    return jsonify({'message': 'success', "article": article})
-
 
 ########################################################################
 ########################################################################
@@ -242,7 +240,7 @@ def patch_article_detail(user, article_id):
             "$set": {"title": title, "content": content}
         })
     # matched_count 업데이트가 되었다면 1, 안되었다면 0
-    print(article.matched_count)
+    # print(article.matched_count)
 
     if article.matched_count:
         return jsonify({'message': 'success'})
